@@ -257,35 +257,18 @@ O Application Load Balancer irá distribuir o tráfego de entrada da internet pa
 ## Etapa 7: Configuração do Auto Scaling Group (ASG)
 O Auto Scaling Group (ASG) é o serviço que vai gerenciar a criação e a exclusão automática das instâncias EC2, garantindo que o seu site seja escalável e resiliente a falhas.
 
-### 7.1. Criação do Modelo de Lançamento (Launch Template)
+### 7.1. Criação do Modelo de Lançamento (Launch Template):
 
-* No Console da AWS, na seção EC2 em 'Grupos de Destino', a opção selecionada foi 'Criar Modelo'.
-No Console da AWS, navegue até EC2 e, no menu lateral, selecione Launch Templates.
+* Depois de configurar, testar a instância e validar user-data:
+* Em EC2 -> Instâncias, foi selecionada a instância privada em execução.
+* Em 'Ações', na seção Imagens e Modelos, foi selecionada a opção de Criar modelo a partir da instância.
+* **Nome do modelo de execução**: `wordpress-model`.
+* **Configurações de rede**: foi selecionada a opção 'Não incluir no modelo de execução' para Sub-redes e Zonas de Disponibilidade.
+* **Outras configurações**: As demais configurações, como o tipo de instância, a AMI e o par de chaves, foram mantidas idênticas às da instância de base já em execução.
 
-Clique em Create launch template.
+### 7.2. Criação do Auto Scaling Group (ASG):
 
-Nome do modelo de lançamento: Defina um nome como wordpress-launch-template.
-
-Conteúdo do modelo:
-
-AMI: Escolha a mesma AMI do Ubuntu 24.04 LTS que você usou para as instâncias de teste.
-
-Tipo de instância: t2.micro.
-
-Par de chaves (key pair): Selecione o seu par de chaves (projetoLinux.pem).
-
-Recursos de rede:
-
-Grupo de segurança: Selecione o grupo de segurança que você criou para as instâncias privadas (ec2-security-group).
-
-Perfil da instância (IAM instance profile): Anexe a EC2SecretsWordpressRole que você criou anteriormente. Este passo é crucial para que as instâncias do ASG possam acessar as credenciais do Secrets Manager.
-
-Detalhes avançados -> Dados de usuário (User data): Copie e cole o script user-data completo que você já escreveu.
-
-Clique em Create launch template.
-
-5.2. Criação do Auto Scaling Group (ASG)
-No Console da AWS, navegue até EC2 e, no menu lateral, selecione Auto Scaling Groups.
+* No Console da AWS, em EC2 -> Auto Scaling Groups.
 
 Clique em Create Auto Scaling group.
 
