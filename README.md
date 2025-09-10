@@ -52,6 +52,7 @@ criado para armazenar os arquivos de mídia do WordPress (imagens, vídeos e doc
 O AWS Secrets Manager foi utilizado para armazenar e proteger as credenciais de acesso ao banco de dados MySQL do WordPress. Dessa forma, não é necessário deixar usuário e senha expostos diretamente no script user-data.
 
 ### 3.1. Criação do Segredo:
+
 * No Console da AWS, foi selecionada a opção 'Armazenar um novo segredo', dentro do serviço Secrets Manager.
 * **Tipo de segredo selecionado**: 'Outro tipo de segredo'.
 * **Campos informados**:
@@ -64,7 +65,7 @@ O AWS Secrets Manager foi utilizado para armazenar e proteger as credenciais de 
 
 ### 3.2. Definindo Permissões de Acesso:
 
-* Na aba Políticas da seção IAM, a opçaõ 'Criar política' foi selecionada.
+* Na aba Políticas da seção IAM, a opção 'Criar política' foi selecionada.
 * **Serviço escolhido**: EC2.
 * **Política definida em 'Editor de políticas -> JSON'**:
 ```
@@ -115,7 +116,8 @@ O AWS Secrets Manager foi utilizado para armazenar e proteger as credenciais de 
     * **HTTP (Porta 80)**: Permitido para `sec-group-bastion`.
     * As regras de saída (`Outbound Rules`) foram mantidas como padrão (permitindo todo o tráfego para `0.0.0.0/0`).
 * **Associação do Grupo de Segurança à Instância**: O Grupo de Segurança criado (`ec2-security-group`) foi associado à instância EC2 privada no momento da criação.
-* **Script User-data**: Ainda na etapa de criação da EC2, em detalhes avançados, o seguinte script foi anexado:
+* **Perfil de instância do IAM**: Ainda na etapa de criação da EC2, em detalhes avançados, para 'Perfil de instância do IAM' foi selecionada a opção `EC2SecretsWordpressRole`, criado na etapa 3.3.
+* **Script User-data**: No final da seção de detalhes avançados, o seguinte script foi anexado:
 
 ```
 #!/bin/bash
@@ -220,8 +222,104 @@ docker-compose up -d
   * **Origem**: Grupo de segurança da intância EC2 `ec2-security-group`.
 * As regras de saída (`Outbound Rules`) foram mantidas.
 
+## Etapa 6: Configuração do Application Load Balancer (ALB)
+O Application Load Balancer irá distribuir o tráfego de entrada da internet para as instâncias EC2, garantindo que o seu site esteja sempre disponível e que o tráfego seja balanceado entre elas.
 
+### 6.1. Criação do Grupo de Destino (Target Group):
 
+* No Console da AWS, na seção EC2 em 'Grupos de Destino', a opção selecionada foi 'Criar grupo de destino'.
+* **Tipo de destino selecionado**: Instâncias.
+* **Nome**: `wordpress-target-group`.
+* **Protocolo/Porta**: HTTP na porta 80 foi mantido.
+* **VPC**: `vpc-wordpress`.
+* **Verificações de integridade**:
+  * **Protocolo**: HTTP
+  * **Caminho da verificação de integridade**: `/wp-login.php`
+* Na próxima etapa, não é necessário adicionar intâncias, pois o Auto Scaling Group isso automaticamente.
+
+### 6.2. Criação do Application Load Balancer (ALB):
+
+* Ainda na seção EC2 em 'Load Balancers', a opção selecionada foi 'Criar load balancer'.
+* **Selecionar o tipo do balanceador de carga**: Application Load Balancer -> Criar.
+* **Nome do load balancer**: O nome definido foi `wordpress-alb`.
+* **Esquema escolhido**: Voltado para a Internet (Internet-facing), para que o ALB esteja acessível publicamente pela internet.
+* **Mapeamento de Rede**:
+  * **VPC**: `vpc-wordpress`.
+  * **Zonas de disponibilidade**: foram selecionadas a `subnet-publica01` da `us-east-1a (use1-az1)` e a `subnet-publica02` da `us-east-1b (use1-az2)`.
+* **Grupos de segurança**: Um novo grupo de segurança `alb-wordpress-sg` foi criado com a seguinte regra de entrada:
+  * **Porta liberada**: 80 (HTTP).
+  * **Origem**: Permitido para 0.0.0.0/0.
+* **Listeners e roteamento**:
+  * **Protocolo**: HTTP na porta 80.
+  * **Grupo de destino**: o grupo escolhido foi `wordpress-target-group`, criado anteriormente.
+* Demais configurações foram mantidas como padrão e a opção 'Criar load balancer' foi selecionada.
+
+## Etapa 7: Configuração do Auto Scaling Group (ASG)
+O Auto Scaling Group (ASG) é o serviço que vai gerenciar a criação e a exclusão automática das instâncias EC2, garantindo que o seu site seja escalável e resiliente a falhas.
+
+### 7.1. Criação do Modelo de Lançamento (Launch Template)
+
+* No Console da AWS, na seção EC2 em 'Grupos de Destino', a opção selecionada foi 'Criar Modelo'.
+No Console da AWS, navegue até EC2 e, no menu lateral, selecione Launch Templates.
+
+Clique em Create launch template.
+
+Nome do modelo de lançamento: Defina um nome como wordpress-launch-template.
+
+Conteúdo do modelo:
+
+AMI: Escolha a mesma AMI do Ubuntu 24.04 LTS que você usou para as instâncias de teste.
+
+Tipo de instância: t2.micro.
+
+Par de chaves (key pair): Selecione o seu par de chaves (projetoLinux.pem).
+
+Recursos de rede:
+
+Grupo de segurança: Selecione o grupo de segurança que você criou para as instâncias privadas (ec2-security-group).
+
+Perfil da instância (IAM instance profile): Anexe a EC2SecretsWordpressRole que você criou anteriormente. Este passo é crucial para que as instâncias do ASG possam acessar as credenciais do Secrets Manager.
+
+Detalhes avançados -> Dados de usuário (User data): Copie e cole o script user-data completo que você já escreveu.
+
+Clique em Create launch template.
+
+5.2. Criação do Auto Scaling Group (ASG)
+No Console da AWS, navegue até EC2 e, no menu lateral, selecione Auto Scaling Groups.
+
+Clique em Create Auto Scaling group.
+
+Nome do grupo: Defina um nome como wordpress-asg.
+
+Modelo de lançamento: Selecione o modelo que você criou (wordpress-launch-template).
+
+Configurações de rede:
+
+VPC: Selecione vpc-wordpress.
+
+Sub-redes: Selecione as sub-redes privadas (subnet-privada01 e subnet-privada02). Isso garante que as instâncias estejam isoladas da internet.
+
+Balanceador de carga:
+
+Selecione a opção Attach to an existing load balancer.
+
+Grupo de destino: Selecione o grupo de destino que você criou (wordpress-target-group).
+
+Verificações de integridade:
+
+Verificação de integridade do Elastic Load Balancer: Marque a caixa.
+
+Período de carência da verificação de integridade: Mantenha 300 segundos, para dar tempo da instância subir e o WordPress iniciar.
+
+Tamanho do grupo e políticas de escalabilidade:
+
+Capacidade desejada: 1
+
+Capacidade mínima: 1
+
+Capacidade máxima: 3 (Isso permite que o ASG crie até 3 instâncias se houver um aumento na demanda).
+
+Pule as demais etapas e clique em Create Auto Scaling group.
 
 
 
