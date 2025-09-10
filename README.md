@@ -33,11 +33,19 @@ Este projeto tem como objetivo implantar o WordPress na AWS de forma escalável 
 
 * **Instância RDS MySQL**: uma intância single-az db3t.micro foi criada no serviço Amazon RDS utilizando a engine MySQL e atribuída à `vpc-wordpress`.
 * **Subnets privadas**: o banco foi provisionado em um subnet-group `subnet-group-privado` contendo apenas as subnets privadas `subnet-privada01` e `subnet-privada02` da VPC, garantindo maior segurança.
+* **Conexão com EC2**: a opção selecionada foi 'Não se conectar a um recurso de computação do EC2', pois isso será feito mais adiante.
+* * **Grupo de Segurança**: um novo grupo de segurança identificado como `sec-group-wordpress` foi criado.
 * **Parâmetros de acesso**: usuário administrador (`admin`), senha, nome do banco (`wordpress_db`) e endpoint foram gerados no momento da criação. Esses dados serão utilizados posteriormente pelo WordPress para se conectar ao banco.
   
 ### 2.2. Criação do Sistema de Arquivos (Amazon EFS):
+criado para armazenar os arquivos de mídia do WordPress (imagens, vídeos e documentos)
 
-* **Sistema de Arquivos EFS**: sistema criado para armazenar os arquivos de mídia do WordPress (imagens, vídeos e documentos), usando as configurações padrão.
+* **Criação do Grupo de Segurança**: antes da criação do EFS, um grupo de segurança chamado `sec-group-efs` foi criado (regras de entrada e saída padrão foram mantidas).
+* **Sistema de Arquivos EFS**: em Amazon EFS -> Sistemas de Arquivos -> Criar -> foi definido o nome `wordpress-efs` e avançado para a próxima etapa.
+* **Rede**: VPC `vpc-wordpress`.
+* **Destinos de Montagem**:
+  * **Zona de Disponibilidade**: 1-east-1a;   **Tipo de endereço IP**: Somente IPv4;   **Sub-rede**: `subnet-privada01`;   **Grupos de segurança**: `sec-group-efs`.
+  * **Zona de Disponibilidade**: 1-east-1b;   **Tipo de endereço IP**: Somente IPv4;   **Sub-rede**: `subnet-privada02`;   **Grupos de segurança**: `sec-group-efs`  
 * **Montagem via User Data**: será configurado posteriormente para ser montado automaticamente em todas as instâncias EC2 no momento do boot.
 
 ## Etapa 3: Configuração do AWS Secrets Manager:
@@ -76,7 +84,7 @@ O AWS Secrets Manager foi utilizado para armazenar e proteger as credenciais de 
 ```
 * **Política salva com o nome `SecretsManagerWordpressRead`**.
 
-### 3.2. Criando a Role (função):
+### 3.3. Criando a Role (função):
 
 * Na aba Funções da seção IAM, a opçaõ 'Criar perfil' foi selecionada.
 * **Tipo de entidade confiável**: Serviço da AWS.
@@ -84,6 +92,7 @@ O AWS Secrets Manager foi utilizado para armazenar e proteger as credenciais de 
 * **Políticas de permissões**: nesta etapa foi selecionada a política `SecretsManagerWordpressRead`, criada anteriormente.
 * **Nome definido**: `EC2SecretsWordpressRole`.
 
+## Etapa 4: Criação e configuração dos Grupos de Segurança:
 
 
 
