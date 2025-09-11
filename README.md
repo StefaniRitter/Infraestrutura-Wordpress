@@ -283,6 +283,23 @@ O Auto Scaling Group (ASG) é o serviço que vai gerenciar a criação e a exclu
   * **Capacidade máxima**: 3
 * **Demais etapas mantidas como padrão**.
 
+## 8. Configuração do Grupo de Segurança das intâncias EC2 (`ec2-security-group`):
+
+*  Para o Grupo de Segurança `ec2-security-group`, criado na etapa de criação da EC2, as regras de entrada (`Inbound Rules`) foram atualizadas para:
+  * **Porta liberada**: 80 (HTTP).
+  * **Origem**: Grupo de segurança do Aplication Load Balancer `alb-wordpress-sg`.
+    
+  * **Porta liberada**: 22 (SSH).
+  * * **Origem**: Grupo de segurança da instância Bastion Host `sec-group-bastion` - para fins de testes.
+
+   
+ * As instâncias devem aparecer como Healthy e a aplicação deve estar rodando:
+
+<img width="1543" height="271" alt="image" src="https://github.com/user-attachments/assets/117deb40-4c5d-44ca-bf76-d0eb007edeed" />
+
+* Para acessar a aplicação no navegador, basta copiar o Nome do DNS em seu Load Balancer e colar em seu navegador.
+
+
 
 
 
