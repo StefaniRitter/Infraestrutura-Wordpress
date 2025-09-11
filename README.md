@@ -38,7 +38,7 @@ Este projeto tem como objetivo implantar o WordPress na AWS de forma escalável 
 * **Parâmetros de acesso**: usuário administrador (`admin`), senha, nome do banco (`wordpress_db`) e endpoint foram gerados no momento da criação. Esses dados serão utilizados posteriormente pelo WordPress para se conectar ao banco.
   
 ### 2.2. Criação do Sistema de Arquivos (Amazon EFS):
-criado para armazenar os arquivos de mídia do WordPress (imagens, vídeos e documentos)
+Sistema criado para armazenar os arquivos de mídia do WordPress (imagens, vídeos e documentos)
 
 * **Criação do Grupo de Segurança**: antes da criação do EFS, um grupo de segurança chamado `sec-group-efs` foi criado (regras de entrada e saída padrão foram mantidas neste momento).
 * **Sistema de Arquivos EFS**: em Amazon EFS -> Sistemas de Arquivos -> Criar -> foi definido o nome `wordpress-efs` e avançado para a próxima etapa.
@@ -267,42 +267,21 @@ O Auto Scaling Group (ASG) é o serviço que vai gerenciar a criação e a exclu
 * **Outras configurações**: As demais configurações, como o tipo de instância, a AMI e o par de chaves, foram mantidas idênticas às da instância de base já em execução.
 
 ### 7.2. Criação do Auto Scaling Group (ASG):
-
-* No Console da AWS, em EC2 -> Auto Scaling Groups.
-
-Clique em Create Auto Scaling group.
-
-Nome do grupo: Defina um nome como wordpress-asg.
-
-Modelo de lançamento: Selecione o modelo que você criou (wordpress-launch-template).
-
-Configurações de rede:
-
-VPC: Selecione vpc-wordpress.
-
-Sub-redes: Selecione as sub-redes privadas (subnet-privada01 e subnet-privada02). Isso garante que as instâncias estejam isoladas da internet.
-
-Balanceador de carga:
-
-Selecione a opção Attach to an existing load balancer.
-
-Grupo de destino: Selecione o grupo de destino que você criou (wordpress-target-group).
-
-Verificações de integridade:
-
-Verificação de integridade do Elastic Load Balancer: Marque a caixa.
-
-Período de carência da verificação de integridade: Mantenha 300 segundos, para dar tempo da instância subir e o WordPress iniciar.
-
-Tamanho do grupo e políticas de escalabilidade:
-
-Capacidade desejada: 1
-
-Capacidade mínima: 1
-
-Capacidade máxima: 3 (Isso permite que o ASG crie até 3 instâncias se houver um aumento na demanda).
-
-Pule as demais etapas e clique em Create Auto Scaling group.
+* No Console da AWS, em EC2 -> Grupos Auto Scaling -> Criar Grupo de Auto Scaling.
+* **Nome do grupo**: nome definido como `wordpress-asg`.
+* **Modelo de lançamento**: modelo criado anteriormente `wordpress-model`.
+* **Configurações de rede**:
+  * **VPC**: `vpc-wordpress`.
+  * **Sub-redes**: foram selecionadas as sub-redes privadas `subnet-privada01` e `subnet-privada02`. Isso garante que as instâncias estejam isoladas da internet.
+* **Balanceador de carga**:
+  * **Grupo de destino**: foi selecionado o grupo de destino criado anteriormente (wordpress-target-group).
+* **Verificação de integridade do Elastic Load Balancer**: verificações de integridade do Elastic Load Balancing ativadas.
+* **Período de carência da verificação de integridade**: 300 segundos mantidos para dar tempo da instância subir e o WordPress iniciar.
+* **Tamanho do grupo e políticas de escalabilidade**:
+  * **Capacidade desejada**: 2
+  * **Capacidade mínima**: 2
+  * **Capacidade máxima**: 3
+* **Demais etapas mantidas como padrão**.
 
 
 
